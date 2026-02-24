@@ -13,6 +13,7 @@ from src.config import (
     CONFLUENCE_EMAIL,
     CONFLUENCE_SPACE_KEY,
     CONFLUENCE_URL,
+    MAX_PAGES_PER_SPACE,
 )
 
 
@@ -66,8 +67,11 @@ def clean_html(html_content: str) -> str:
     return text.strip()
 
 
-def load_confluence_pages(space_key: str | None = None) -> list[Document]:
-    """Load all pages from a Confluence space and return as LangChain Documents."""
+def load_confluence_pages(
+    space_key: str | None = None,
+    max_pages: int = MAX_PAGES_PER_SPACE,
+) -> list[Document]:
+    """Load pages from a Confluence space and return as LangChain Documents."""
     space_key = space_key or CONFLUENCE_SPACE_KEY
     if not space_key:
         raise ValueError(
@@ -79,13 +83,14 @@ def load_confluence_pages(space_key: str | None = None) -> list[Document]:
     start = 0
     limit = 50
 
-    print(f"Loading pages from Confluence space '{space_key}'...")
+    print(f"Loading pages from Confluence space '{space_key}' (max {max_pages})...")
 
-    while True:
+    while len(documents) < max_pages:
+        batch_limit = min(limit, max_pages - len(documents))
         pages = client.get_all_pages_from_space(
             space=space_key,
             start=start,
-            limit=limit,
+            limit=batch_limit,
             expand="body.storage,version,ancestors",
         )
 
@@ -93,6 +98,9 @@ def load_confluence_pages(space_key: str | None = None) -> list[Document]:
             break
 
         for page in pages:
+            if len(documents) >= max_pages:
+                break
+
             html_body = page.get("body", {}).get("storage", {}).get("value", "")
             text = clean_html(html_body)
 
@@ -120,10 +128,10 @@ def load_confluence_pages(space_key: str | None = None) -> list[Document]:
             full_text = f"# {page['title']}\n\n{text}"
             documents.append(Document(page_content=full_text, metadata=metadata))
 
-        print(f"  Loaded {start + len(pages)} pages...")
-        start += limit
+        print(f"  Loaded {len(documents)} pages...")
+        start += batch_limit
 
-        if len(pages) < limit:
+        if len(pages) < batch_limit:
             break
 
     print(f"Total: {len(documents)} pages loaded from '{space_key}'")

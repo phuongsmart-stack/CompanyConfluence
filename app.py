@@ -2,7 +2,7 @@
 
 import streamlit as st
 
-from src.config import ANTHROPIC_API_KEY, CONFLUENCE_API_TOKEN, CONFLUENCE_SPACE_KEY, CONFLUENCE_URL
+from src.config import ANTHROPIC_API_KEY, CONFLUENCE_API_TOKEN, CONFLUENCE_SPACE_KEYS, CONFLUENCE_URL
 from src.confluence_loader import load_confluence_pages
 from src.rag_pipeline import get_index_count, has_index, ingest_documents, query
 
@@ -23,7 +23,7 @@ with st.sidebar:
     if config_ok:
         st.success("Environment configured")
         st.caption(f"Confluence: {CONFLUENCE_URL}")
-        st.caption(f"Space: {CONFLUENCE_SPACE_KEY or '(not set)'}")
+        st.caption(f"Spaces: {', '.join(CONFLUENCE_SPACE_KEYS)}")
     else:
         st.error("Missing configuration — check your `.env` file")
         missing = []
@@ -46,29 +46,40 @@ with st.sidebar:
     else:
         st.warning("No data indexed yet")
 
-    # Ingestion controls
-    space_input = st.text_input(
-        "Confluence Space Key",
-        value=CONFLUENCE_SPACE_KEY,
-        placeholder="e.g. ENG, HR, WIKI",
+    # Space selection
+    st.subheader("Spaces")
+    selected_spaces = []
+    for space in CONFLUENCE_SPACE_KEYS:
+        if st.checkbox(space, value=True, key=f"space_{space}"):
+            selected_spaces.append(space)
+
+    # Page limit
+    max_pages = st.number_input(
+        "Max pages per space",
+        min_value=1,
+        max_value=500,
+        value=100,
+        step=10,
     )
 
     if st.button("Load & Index Confluence Pages", disabled=not config_ok):
-        if not space_input:
-            st.error("Enter a space key first")
+        if not selected_spaces:
+            st.error("Select at least one space")
         else:
-            with st.spinner("Loading pages from Confluence..."):
-                try:
-                    docs = load_confluence_pages(space_key=space_input)
-                    if not docs:
-                        st.warning("No pages found in that space")
-                    else:
-                        st.info(f"Loaded {len(docs)} pages. Indexing...")
-                        ingest_documents(docs)
-                        st.success(f"Done! Indexed {len(docs)} pages.")
-                        st.rerun()
-                except Exception as e:
-                    st.error(f"Error: {e}")
+            all_docs = []
+            for space in selected_spaces:
+                with st.spinner(f"Loading from {space}..."):
+                    try:
+                        docs = load_confluence_pages(space_key=space, max_pages=max_pages)
+                        all_docs.extend(docs)
+                        st.info(f"{space}: loaded {len(docs)} pages")
+                    except Exception as e:
+                        st.error(f"Error loading {space}: {e}")
+            if all_docs:
+                with st.spinner("Indexing documents..."):
+                    ingest_documents(all_docs)
+                st.success(f"Done! Indexed {len(all_docs)} pages from {len(selected_spaces)} space(s).")
+                st.rerun()
 
     if indexed and st.button("Clear Index"):
         import shutil
