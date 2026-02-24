@@ -13,7 +13,7 @@ MAX_PAGES_PER_SPACE = 100
 
 # Anthropic
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
-ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-20250514")
+ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MODEL", "claude-opus-4-6")
 
 # RAG settings
 CHUNK_SIZE = int(os.getenv("CHUNK_SIZE", "1000"))

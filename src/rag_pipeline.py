@@ -116,7 +116,7 @@ def get_rag_chain():
     vector_store = get_vector_store()
     retriever = vector_store.as_retriever(
         search_type="similarity",
-        search_kwargs={"k": 5},
+        search_kwargs={"k": 10},
     )
 
     llm = ChatAnthropic(
