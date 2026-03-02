@@ -15,6 +15,12 @@ MAX_PAGES_PER_SPACE = 100
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MODEL", "claude-opus-4-6")
 
+# AWS Athena
+AWS_REGION = os.getenv("AWS_REGION", "us-east-1")
+ATHENA_S3_OUTPUT = os.getenv("ATHENA_S3_OUTPUT", "")
+ATHENA_DATABASE = os.getenv("ATHENA_DATABASE", "")
+ATHENA_WORKGROUP = os.getenv("ATHENA_WORKGROUP", "primary")
+
 # RAG settings
 CHUNK_SIZE = int(os.getenv("CHUNK_SIZE", "1000"))
 CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP", "200"))
